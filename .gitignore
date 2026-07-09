@@ -1,0 +1,32 @@
+# Environments & Secrets
+.env
+.env.[a-zA-Z0-9]*
+venv/
+ENV/
+env/
+
+# Python caching
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Databases & Local Storage
+*.sqlite3
+db.sqlite3-journal
+
+# Media & Static local uploads
+/static/
+/media/
+
+# Docker logs and system files
+.docker/
+*.log
+
+# IDEs and Editors
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
