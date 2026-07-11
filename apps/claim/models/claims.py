@@ -1,12 +1,16 @@
 from django.db import models
 from core.models import TimeStampedModel
-from saas_core_admin.models.admins_hospitals import Hospital
-from user.models.personal import User
-from user.models.medical import UserAppointment
-from hr_attendance_department.models.hrs import Doctor
-from claim.models.provider import InsuranceProvider, TpaProvider
+from apps.saas_core_admin.models.admins_hospitals import Hospital
+from apps.user.models.personal import User
+from apps.user.models.medical import UserAppointment
+from apps.hr_attendance_department.models.hrs import Doctor
+from .provider import InsuranceProvider, TpaProvider
 
 class Claim(TimeStampedModel):
+
+    class Meta:
+        app_label = 'claim'
+
     hospital = models.ForeignKey(Hospital, on_delete=models.CASCADE)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     appointment = models.ForeignKey(UserAppointment, on_delete=models.SET_NULL, null=True, blank=True)

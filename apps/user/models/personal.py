@@ -12,7 +12,7 @@ class User(TimeStampedModel):
         ('OTHER', 'Other Rare Type'),
         ('UNKNOWN', 'Unknown / Pending Test'),
     ]
-
+     
     name = models.CharField(max_length=150)
     password = models.CharField(max_length=128)
     contact = models.CharField(max_length=15, unique=True, null=True, blank=True)
@@ -28,6 +28,9 @@ class User(TimeStampedModel):
     # THE LOCK: Once True, the user cannot change their blood group via the app
     is_blood_group_verified = models.BooleanField(default=False) 
 
+    class Meta:
+        app_label = 'user'
+
     def __str__(self):
         return self.name
 
@@ -37,6 +40,9 @@ class EmergencyContact(TimeStampedModel):
     relation = models.CharField(max_length=50)  # e.g., 'Spouse', 'Father', 'Friend'
     contact_number = models.CharField(max_length=15)
     is_primary = models.BooleanField(default=False)
+
+    class Meta:
+        app_label = 'user'  # <-- ADDED THIS HERE
 
     def __str__(self):
         return f"{self.name} ({self.relation})"

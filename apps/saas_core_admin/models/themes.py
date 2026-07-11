@@ -2,6 +2,9 @@ from django.db import models
 from core.models import TimeStampedModel
 
 class Theme(TimeStampedModel):
+    class Meta:
+        app_label = 'saas_core_admin'
+
     name = models.CharField(max_length=100)
     primary = models.CharField(max_length=7, null=True, blank=True)
     secondary = models.CharField(max_length=7, null=True, blank=True)

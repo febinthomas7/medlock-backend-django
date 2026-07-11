@@ -1,8 +1,11 @@
 from django.db import models
 from core.models import CustomIDModel
-from hr_attendance_department.models.departments import Department
+from .departments import Department
 
 class Doctor(CustomIDModel):
+    class Meta:
+        app_label = 'hr_attendance_department'
+
     name = models.CharField(max_length=150)
     password = models.CharField(max_length=128)
     adhaar = models.CharField(max_length=20, unique=True, null=True, blank=True)
@@ -18,6 +21,9 @@ class Doctor(CustomIDModel):
         return self.name
 
 class Nurse(CustomIDModel):
+    class Meta:
+        app_label = 'hr_attendance_department'
+
     name = models.CharField(max_length=150)
     password = models.CharField(max_length=128)
     adhaar = models.CharField(max_length=20, unique=True, null=True, blank=True)
@@ -29,6 +35,9 @@ class Nurse(CustomIDModel):
     is_active = models.BooleanField(default=True)
 
 class Receptionist(CustomIDModel):
+    class Meta:
+        app_label = 'hr_attendance_department'
+
     name = models.CharField(max_length=150)
     password = models.CharField(max_length=128)
     adhaar = models.CharField(max_length=20, unique=True, null=True, blank=True)

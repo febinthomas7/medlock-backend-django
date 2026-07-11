@@ -1,6 +1,6 @@
 from django.db import models
 from core.models import TimeStampedModel
-from saas_core_admin.models.admins_hospitals import Admin, Hospital
+from apps.saas_core_admin.models.admins_hospitals import Admin, Hospital
 
 class HospitalNetwork(TimeStampedModel):
     hospital = models.ForeignKey(Hospital, on_delete=models.CASCADE)

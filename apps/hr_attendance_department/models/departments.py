@@ -1,8 +1,11 @@
 from django.db import models
 from core.models import CustomIDModel, TimeStampedModel
-from saas_core_admin.models.admins_hospitals import Hospital
+from apps.saas_core_admin.models.admins_hospitals import Hospital
 
 class Department(CustomIDModel):
+    class Meta:
+        app_label = 'hr_attendance_department'
+
     hospital = models.ForeignKey(Hospital, on_delete=models.CASCADE)
     name = models.CharField(max_length=100)
     password = models.CharField(max_length=128)
@@ -14,7 +17,10 @@ class Department(CustomIDModel):
         return self.name
 
 class Ward(CustomIDModel):
-    department = models.ForeignKey(Department, on_delete=models.CASCADE)
+
+    class Meta:
+        app_label = 'hr_attendance_department'
+
     name = models.CharField(max_length=100)
     password = models.CharField(max_length=128)
     is_active = models.BooleanField(default=True)
@@ -23,6 +29,9 @@ class Ward(CustomIDModel):
         return self.name
 
 class Room(CustomIDModel):
+    class Meta:
+        app_label = 'hr_attendance_department'
+
     ward = models.ForeignKey(Ward, on_delete=models.CASCADE)
     room_number = models.CharField(max_length=20)
     password = models.CharField(max_length=128)

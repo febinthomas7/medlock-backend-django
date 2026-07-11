@@ -1,9 +1,11 @@
 from django.db import models
 from core.models import TimeStampedModel
-from saas_core_admin.models.admins_hospitals import Hospital
-from hr_attendance_department.models.departments import Department
+from apps.saas_core_admin.models.admins_hospitals import Hospital
+from .departments import Department
 
 class BiometricPunch(TimeStampedModel):
+    class Meta:
+        app_label = 'hr_attendance_department'
     hospital = models.ForeignKey(Hospital, on_delete=models.CASCADE)
     device_ip = models.CharField(max_length=50, null=True, blank=True)
     punch_id = models.IntegerField()
@@ -11,6 +13,8 @@ class BiometricPunch(TimeStampedModel):
     punch_type = models.CharField(max_length=10, null=True, blank=True)
 
 class StaffAttendance(TimeStampedModel):
+    class Meta:
+        app_label = 'hr_attendance_department'
     hospital = models.ForeignKey(Hospital, on_delete=models.CASCADE)
     department = models.ForeignKey(Department, on_delete=models.CASCADE)
     staff_role = models.CharField(max_length=3)

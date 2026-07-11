@@ -1,8 +1,10 @@
 from django.db import models
 from core.models import TimeStampedModel
-from claim.models.claims import Claim
+from .claims import Claim
 
 class ClaimDiagnosis(TimeStampedModel):
+    class Meta:
+        app_label = 'claim'
     claim = models.ForeignKey(Claim, on_delete=models.CASCADE)
     icd_code = models.CharField(max_length=20)
     description = models.TextField()
@@ -16,6 +18,8 @@ class ClaimDiagnosis(TimeStampedModel):
     added_at = models.DateTimeField(auto_now_add=True)
 
 class ClaimProcedure(TimeStampedModel):
+    class Meta:
+        app_label = 'claim'
     claim = models.ForeignKey(Claim, on_delete=models.CASCADE)
     procedure_code = models.CharField(max_length=50)
     description = models.TextField()
@@ -28,6 +32,8 @@ class ClaimProcedure(TimeStampedModel):
     added_at = models.DateTimeField(auto_now_add=True)
 
 class ClaimLabOrder(TimeStampedModel):
+    class Meta:
+        app_label = 'claim'
     claim = models.ForeignKey(Claim, on_delete=models.CASCADE)
     loinc_code = models.CharField(max_length=50)
     description = models.TextField()
@@ -38,6 +44,8 @@ class ClaimLabOrder(TimeStampedModel):
     added_at = models.DateTimeField(auto_now_add=True)
 
 class ClaimPrescription(TimeStampedModel):
+    class Meta:
+        app_label = 'claim'
     claim = models.ForeignKey(Claim, on_delete=models.CASCADE)
     drug_code = models.CharField(max_length=50)
     description = models.TextField()

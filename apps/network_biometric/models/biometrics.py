@@ -12,6 +12,7 @@ class BiometricDeviceMapping(TimeStampedModel):
     unassigned_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
+        app_label = 'network_biometric'
         constraints = [
             models.UniqueConstraint(
                 fields=['device_ip', 'punch_id'],

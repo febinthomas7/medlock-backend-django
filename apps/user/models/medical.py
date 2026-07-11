@@ -1,9 +1,9 @@
 from django.db import models
 from core.models import TimeStampedModel
-from user.models.personal import User
-from saas_core_admin.models.admins_hospitals import Hospital
-from hr_attendance_department.models.hrs import Doctor
-from hr_attendance_department.models.departments import Department
+from .personal import User
+from apps.saas_core_admin.models.admins_hospitals import Hospital
+from apps.hr_attendance_department.models.hrs import Doctor
+from apps.hr_attendance_department.models.departments import Department
 
 class UserAppointment(TimeStampedModel):
     user = models.ForeignKey(User, on_delete=models.CASCADE)

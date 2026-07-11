@@ -1,9 +1,12 @@
 from django.db import models
 from core.models import CustomIDModel
-from saas_core_admin.models.subscriptions import Subscription
-from saas_core_admin.models.themes import Theme
+from .subscriptions import Subscription
+from .themes import Theme
 
 class Admin(CustomIDModel):
+    class Meta:
+        app_label = 'saas_core_admin'
+
     name = models.CharField(max_length=150)
     password = models.CharField(max_length=128)
     contact = models.CharField(max_length=15, null=True, blank=True)
@@ -17,6 +20,9 @@ class Admin(CustomIDModel):
         return self.name
 
 class Hospital(CustomIDModel):
+    class Meta:
+        app_label = 'saas_core_admin'
+
     admin = models.ForeignKey(Admin, on_delete=models.CASCADE)
     name = models.CharField(max_length=150)
     password = models.CharField(max_length=128)
