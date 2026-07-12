@@ -27,6 +27,14 @@ class Hospital(CustomIDModel):
     name = models.CharField(max_length=150)
     password = models.CharField(max_length=128)
     location = models.TextField(null=True, blank=True)
+    # Add these missing fields to match the frontend:
+    email = models.EmailField(blank=True, null=True)
+    address = models.TextField(blank=True, null=True)
+    npi_id = models.CharField(max_length=100, blank=True, null=True)
+    contact_number = models.CharField(max_length=20, blank=True, null=True)
+    image_url = models.URLField(max_length=1000, blank=True, null=True)
+    state = models.CharField(max_length=100, blank=True, null=True)
+    district = models.CharField(max_length=100, blank=True, null=True)
     is_active = models.BooleanField(default=True)
 
     def __str__(self):
