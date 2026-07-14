@@ -27,16 +27,33 @@ class PermissionMapping(TimeStampedModel):
 
 class PermissionOverride(TimeStampedModel):
     admin = models.ForeignKey(Admin, on_delete=models.CASCADE)
-    staff_type = models.CharField(max_length=3)
-    staff_id = models.CharField(max_length=50) 
+    staff_type = models.CharField(max_length=3) # e.g., 'NS', 'DR'
+    
+    # Nullable makes this a dual-purpose table! Nullable means for all staff in a particular role
+    staff_id = models.CharField(max_length=50, null=True, blank=True) 
+    
     permission = models.ForeignKey(Permission, on_delete=models.CASCADE)
     is_allowed = models.BooleanField()
     assigned_by = models.CharField(max_length=50)
 
     class Meta:
-        unique_together = ('staff_id', 'staff_type', 'permission'),
         app_label = 'plugin_rbac'
+        
         indexes = [
-            # This creates a combined index for the most common lookup pattern
-            models.Index(fields=['staff_id', 'staff_type']),
+            models.Index(fields=['admin', 'staff_type', 'staff_id']),
+        ]
+        
+        constraints = [
+            # Constraint 1: Handles specific individual user overrides (staff_id is populated)
+            models.UniqueConstraint(
+                fields=['admin', 'staff_type', 'staff_id', 'permission'],
+                name='unique_individual_permission_override',
+                condition=models.Q(staff_id__isnull=False)
+            ),
+            # Constraint 2: Handles global role overrides (staff_id is NULL)
+            models.UniqueConstraint(
+                fields=['admin', 'staff_type', 'permission'],
+                name='unique_role_permission_override',
+                condition=models.Q(staff_id__isnull=True)
+            )
         ]
