@@ -76,9 +76,9 @@ class RoleBasedLoginView(APIView):
         theme_data = None
         if hasattr(user_instance, 'theme') and user_instance.theme:
             theme_data = {
-                "primary": user_instance.theme.primary_color,
-                "secondary": user_instance.theme.secondary_color,
-                "mode": user_instance.theme.mode
+                "primary": getattr(user_instance.theme, 'primary', getattr(user_instance.theme, 'primary_color', '#000000')),
+                "secondary": getattr(user_instance.theme, 'secondary', getattr(user_instance.theme, 'secondary_color', '#FFFFFF')),
+                "mode": getattr(user_instance.theme, 'mode', 'light')
             }
 
         # 7 Generate Custom JWT Token

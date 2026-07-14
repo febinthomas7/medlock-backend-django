@@ -8,6 +8,7 @@ class Permission(TimeStampedModel):
         app_label = 'plugin_rbac'
 
     name = models.CharField(max_length=100)
+    tab_name = models.CharField(max_length=100, default='')
     suburl = models.CharField(max_length=100)
     plugin = models.ForeignKey(Plugin, on_delete=models.CASCADE)
 
