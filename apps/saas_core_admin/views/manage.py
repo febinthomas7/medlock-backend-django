@@ -50,17 +50,30 @@ class DepartmentManagementView(APIView):
 
     def get(self, request):
         try:
-            departments = selectors.get_departments_for_admin(request.user)
+            # 1. Grab the role from the token
+            role = request.auth.get('role', '').lower()
+            
+            # 2. Explicitly route to the correct selector function
+            if role in ['hp', 'hospital']:
+                departments = selectors.get_departments_by_hospital(request.user)
+            elif role in ['ad', 'admin']:
+                departments = selectors.get_departments_for_admin(request.user)
+            else:
+                return Response({"status": False, "message": "Unauthorized role"}, status=status.HTTP_403_FORBIDDEN)
+            
             return Response({
                 "status": True,
                 "departments": departments
             }, status=status.HTTP_200_OK)
+            
         except Exception as e:
             return Response({"status": False, "message": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
     def post(self, request):
         try:
-            department = services.create_department(request.user, request.data)
+            role = request.auth.get('role', '').lower()
+            department = services.create_department(request.user, role, request.data)
+            
             return Response({
                 "status": True,
                 "id": str(department.id),
@@ -78,7 +91,9 @@ class DepartmentManagementView(APIView):
 
     def put(self, request):
         try:
-            department = services.update_department(request.user, request.data)
+            role = request.auth.get('role', '').lower()
+            department = services.update_department(request.user, role, request.data)
+            
             return Response({
                 "status": True,
                 "id": str(department.id),
@@ -93,7 +108,6 @@ class DepartmentManagementView(APIView):
             }, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return Response({"status": False, "message": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
 
 class StaffManagementView(APIView):
     permission_classes = [IsAuthenticated]

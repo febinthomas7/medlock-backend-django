@@ -10,6 +10,7 @@ def _get_staff_model(role):
     }
     return role_map.get(str(role).lower())
 
+# --- ADMIN SELECTOR ---
 def get_departments_for_admin(admin_user):
     """Fetches all departments belonging to the given admin."""
     departments = Department.objects.filter(hospital__admin=admin_user).values(
@@ -17,12 +18,18 @@ def get_departments_for_admin(admin_user):
     )
     return list(departments)
 
+# --- HOSPITAL SELECTOR (NEW) ---
+def get_departments_by_hospital(hospital_user):
+    """Fetches departments only for the specific logged-in hospital."""
+    departments = Department.objects.filter(hospital=hospital_user).values(
+        'id', 'name', 'password', 'building_id', 'floor', 'is_active', 'hospital_id'
+    )
+    return list(departments)
+
 def get_staff_for_admin(admin_user, role):
-    """Fetches staff members by role for the given admin's network."""
     Model = _get_staff_model(role)
-    
     if not Model:
-        raise ValueError("Invalid or missing role parameter. Use 'doctor', 'nurse', or 'receptionist'.")
+        raise ValueError("Invalid or missing role parameter.")
 
     staff_queryset = Model.objects.filter(
         department__hospital__admin=admin_user

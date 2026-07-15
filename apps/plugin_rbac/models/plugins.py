@@ -20,6 +20,7 @@ class AdminPlugin(TimeStampedModel):
     admin = models.ForeignKey(Admin, on_delete=models.CASCADE)
     plugin = models.ForeignKey(Plugin, on_delete=models.CASCADE)
     activated_at = models.DateTimeField(auto_now_add=True)
+    deactivated_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         unique_together = ('admin', 'plugin'),

@@ -94,11 +94,11 @@ class DynamicNavigationView(APIView):
         ).values_list('plugin_id', flat=True)
 
         # 4. Fetch all permissions mapped to ALL resolved roles for active plugins
-        # Using role__in handles both abbreviated or full role names in your DB
+        # select_related('permission__plugin') is required so we can group by plugin name later
         base_permissions = PermissionMapping.objects.filter(
             role__in=roles,
             permission__plugin_id__in=active_plugin_ids
-        ).select_related('permission')
+        ).select_related('permission', 'permission__plugin')
 
         # Dictionary prevents duplicate permissions when a user matches multiple roles
         allowed_permissions = {}
@@ -131,25 +131,29 @@ class DynamicNavigationView(APIView):
                 # No override exists, rely on base mapping
                 allowed_permissions[perm.id] = perm
 
-        # 6. Create a flat list of navigation items (No sub-items)
-        final_navigation = []
+        # 6. Group by Plugin (Tab) and Permission (Sub-tab)
+        nav_dict = {}
         
         for perm in allowed_permissions.values():
-            tab = perm.tab_name
+            plugin_name = perm.plugin.name 
             
-            # Use tab_name if it exists and isn't 'None', otherwise fallback to perm.name
-            display_name = tab if tab and tab.lower() != 'none' else perm.name
+            # Create the Plugin tab if it doesn't exist yet
+            if plugin_name not in nav_dict:
+                nav_dict[plugin_name] = {
+                    "name": plugin_name,
+                    "subItems": []
+                }
             
-            final_navigation.append({
-                "name": display_name,
+            # Use tab_name for the sub-tab, but safely fallback to perm.name if it's empty
+            sub_tab_name = perm.tab_name if perm.tab_name and perm.tab_name.strip().lower() != 'none' else perm.name
+
+            # Append the Permission as a sub-tab inside the Plugin
+            nav_dict[plugin_name]["subItems"].append({
+                "name": sub_tab_name,
                 "href": perm.suburl
             })
 
-        # Debugging print statements
-        print("1. Received Roles:", raw_roles)
-        print("2. Expanded Roles Evaluated:", roles)
-        print("3. Resolved Admin ID:", admin_id)
-        print("4. Active Plugin IDs:", list(active_plugin_ids))
-        print("5. Unique Allowed Permissions:", len(allowed_permissions))
+        # Convert dictionary to array
+        final_navigation = list(nav_dict.values())
 
         return Response({"navigation": final_navigation}, status=200)

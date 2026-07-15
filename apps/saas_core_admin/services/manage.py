@@ -45,14 +45,19 @@ def update_hospital(admin_user, data):
     
     return hospital
 
-def create_department(admin_user, data):
-    hospital_id = data.get('hospital_id')
-    if not hospital_id:
-        raise ValueError("Hospital ID is required to create a department.")
-
+def create_department(user, role, data):
     with transaction.atomic():
-        hospital = Hospital.objects.get(id=hospital_id, admin=admin_user)
         is_active_val = str(data.get('is_active', 'true')).lower() == 'true'
+
+        if role in ['hp', 'hospital']:
+            hospital = user  # The user IS the hospital
+        elif role in ['ad', 'admin']:
+            hospital_id = data.get('hospital_id')
+            if not hospital_id or str(hospital_id).lower() == "auto":
+                raise ValueError("Valid Hospital ID is required to create a department.")
+            hospital = Hospital.objects.get(id=hospital_id, admin=user)
+        else:
+            raise ValueError("Unauthorized role for department creation.")
 
         return Department.objects.create(
             hospital=hospital,
@@ -63,12 +68,17 @@ def create_department(admin_user, data):
             is_active=is_active_val
         )
 
-def update_department(admin_user, data):
+def update_department(user, role, data):
     department_id = data.get('id')
     if not department_id:
         raise ValueError("Department ID is required for updating.")
 
-    department = Department.objects.get(id=department_id, hospital__admin=admin_user)
+    if role in ['hp', 'hospital']:
+        department = Department.objects.get(id=department_id, hospital=user)
+    elif role in ['ad', 'admin']:
+        department = Department.objects.get(id=department_id, hospital__admin=user)
+    else:
+        raise ValueError("Unauthorized role for department update.")
     
     if 'name' in data: department.name = data.get('name')
     if 'password' in data: department.password = data.get('password')
