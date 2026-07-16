@@ -89,18 +89,38 @@ def update_department(user, role, data):
     
     return department
 
-def create_staff(admin_user, data):
+def create_staff(user, auth_role, data):
+    """Creates a new staff member with 3-tier RBAC verification"""
     role = data.get('role')
     department_id = data.get('department_id')
     Model = _get_staff_model(role)
 
-    if not Model or not department_id:
-        raise ValueError("Valid role and department_id are required.")
+    if not Model:
+        raise ValueError("Valid role is required.")
+
+    user_type = user.__class__.__name__
 
     with transaction.atomic():
-        department = Department.objects.get(id=department_id, hospital__admin=admin_user)
+        # --- 1. 3-TIER SECURITY CHECK FOR TARGET DEPARTMENT ---
+        if user_type == 'Department':
+            # Department can only add staff directly to itself
+            department = user
+        else:
+            if not department_id:
+                raise ValueError("Department ID is required.")
+            
+            if user_type == 'Hospital':
+                # Hospital can add to any of its own departments
+                department = Department.objects.get(id=department_id, hospital=user)
+            elif user_type == 'Admin':
+                # Admin can add to any department in their network
+                department = Department.objects.get(id=department_id, hospital__admin=user)
+            else:
+                raise ValueError("Unauthorized role for staff creation.")
+
         is_active_val = str(data.get('is_active', 'true')).lower() == 'true'
 
+        # Build staff data securely
         staff_fields = {
             "department": department,
             "name": data.get('name'),
@@ -113,6 +133,7 @@ def create_staff(admin_user, data):
             "is_active": is_active_val
         }
 
+        # Add designation if the staff member is a doctor
         if role == 'doctor' and 'designation' in data:
             staff_fields['designation'] = data.get('designation')
 
@@ -120,7 +141,8 @@ def create_staff(admin_user, data):
         
     return staff_member, role
 
-def update_staff(admin_user, data):
+def update_staff(user, auth_role, data):
+    """Updates an existing staff member with 3-tier RBAC verification"""
     role = data.get('role')
     staff_id = data.get('id')
     Model = _get_staff_model(role)
@@ -128,25 +150,48 @@ def update_staff(admin_user, data):
     if not Model or not staff_id:
         raise ValueError("Valid role and staff ID are required.")
 
-    staff_member = Model.objects.get(id=staff_id, department__hospital__admin=admin_user)
-    
-    new_department_id = data.get('department_id')
-    if new_department_id and str(new_department_id) != str(staff_member.department_id):
-        new_department = Department.objects.get(id=new_department_id, hospital__admin=admin_user)
-        staff_member.department = new_department
+    user_type = user.__class__.__name__
 
-    if 'name' in data: staff_member.name = data.get('name')
-    if 'password' in data: staff_member.password = data.get('password')
-    if 'adhaar' in data and data.get('adhaar'): staff_member.adhaar = data.get('adhaar')
-    if 'contact' in data: staff_member.contact = data.get('contact')
-    if 'gmail' in data: staff_member.gmail = data.get('gmail')
-    if 'address' in data: staff_member.address = data.get('address')
-    if 'punch_id' in data: staff_member.punch_id = data.get('punch_id')
-    if 'is_active' in data: staff_member.is_active = str(data.get('is_active')).lower() == 'true'
+    with transaction.atomic():
+        # --- 1. 3-TIER SECURITY CHECK FOR RECORD OWNERSHIP ---
+        if user_type == 'Department':
+            # Department can only update its own staff
+            staff_member = Model.objects.get(id=staff_id, department=user)
+        elif user_type == 'Hospital':
+            # Hospital can update any staff in its branch
+            staff_member = Model.objects.get(id=staff_id, department__hospital=user)
+        elif user_type == 'Admin':
+            # Admin can update anyone in the network
+            staff_member = Model.objects.get(id=staff_id, department__hospital__admin=user)
+        else:
+            raise ValueError("Unauthorized role for staff update.")
 
-    if role == 'doctor' and 'designation' in data:
-        staff_member.designation = data.get('designation')
+        # --- 2. 3-TIER SECURITY CHECK FOR DEPARTMENT TRANSFERS ---
+        new_department_id = data.get('department_id')
+        if new_department_id and str(new_department_id) != str(staff_member.department_id):
+            if user_type == 'Department':
+                raise ValueError("Departments are not authorized to transfer staff to other wings.")
+            elif user_type == 'Hospital':
+                new_department = Department.objects.get(id=new_department_id, hospital=user)
+            elif user_type == 'Admin':
+                new_department = Department.objects.get(id=new_department_id, hospital__admin=user)
+            
+            staff_member.department = new_department
 
-    staff_member.save()
-    
+        # --- 3. UPDATE FIELDS DYNAMICALLY ---
+        if 'name' in data: staff_member.name = data.get('name')
+        if 'password' in data and data.get('password'): staff_member.password = data.get('password')
+        if 'adhaar' in data and data.get('adhaar'): staff_member.adhaar = data.get('adhaar')
+        if 'contact' in data: staff_member.contact = data.get('contact')
+        if 'gmail' in data: staff_member.gmail = data.get('gmail')
+        if 'address' in data: staff_member.address = data.get('address')
+        if 'punch_id' in data: staff_member.punch_id = data.get('punch_id')
+        if 'is_active' in data: staff_member.is_active = str(data.get('is_active')).lower() == 'true'
+
+        # Update designation if the staff member is a doctor
+        if role == 'doctor' and 'designation' in data:
+            staff_member.designation = data.get('designation')
+
+        staff_member.save()
+        
     return staff_member, role

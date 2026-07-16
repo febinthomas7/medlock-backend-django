@@ -16,14 +16,24 @@ class AdminBranchListView(APIView):
     def get(self, request):
         try:
             user = request.user 
+            user_type = user.__class__.__name__
             
-            # --- BULLETPROOF ROLE CHECK ---
-            if user.__class__.__name__ == 'Hospital':
+            # --- 3-TIER BULLETPROOF ROLE CHECK ---
+            if user_type == 'Hospital':
                 # Hospital only sees its own data
                 admin_hospitals = Hospital.objects.filter(id=user.id)
-            else:
+                
+            elif user_type == 'Department':
+                # Department only sees its parent hospital
+                admin_hospitals = Hospital.objects.filter(id=user.hospital_id)
+                
+            elif user_type == 'Admin':
                 # Admin sees all hospitals under their account
                 admin_hospitals = Hospital.objects.filter(admin=user)
+                
+            else:
+                # Failsafe for unauthorized roles
+                admin_hospitals = Hospital.objects.none()
 
             # 2. Define Subqueries for Per-Hospital Counts 
             docs_sq = Doctor.objects.filter(

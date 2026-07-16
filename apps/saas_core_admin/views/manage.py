@@ -50,14 +50,17 @@ class DepartmentManagementView(APIView):
 
     def get(self, request):
         try:
-            # 1. Grab the role from the token
-            role = request.auth.get('role', '').lower()
+            user = request.user
+            user_type = user.__class__.__name__
             
-            # 2. Explicitly route to the correct selector function
-            if role in ['hp', 'hospital']:
-                departments = selectors.get_departments_by_hospital(request.user)
-            elif role in ['ad', 'admin']:
-                departments = selectors.get_departments_for_admin(request.user)
+            # --- 3-TIER BULLETPROOF ROLE ROUTING ---
+            if user_type == 'Hospital':
+                departments = selectors.get_departments_by_hospital(user)
+            elif user_type == 'Admin':
+                departments = selectors.get_departments_for_admin(user)
+            elif user_type == 'Department':
+                # Department only needs to see itself to populate the dropdown
+                departments = selectors.get_department_for_self(user)
             else:
                 return Response({"status": False, "message": "Unauthorized role"}, status=status.HTTP_403_FORBIDDEN)
             
@@ -109,17 +112,35 @@ class DepartmentManagementView(APIView):
         except Exception as e:
             return Response({"status": False, "message": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
+
+
 class StaffManagementView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
         try:
             role = request.query_params.get('role')
-            staff_data = selectors.get_staff_for_admin(request.user, role)
+            if not role:
+                return Response({"status": False, "message": "Staff role query parameter is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+            user = request.user
+            user_type = user.__class__.__name__
+            
+            # --- 3-TIER BULLETPROOF ROLE ROUTING ---
+            if user_type == 'Hospital':
+                staff_data = selectors.get_staff_for_hospital(user, role)
+            elif user_type == 'Department':
+                staff_data = selectors.get_staff_for_department(user, role)
+            elif user_type == 'Admin':
+                staff_data = selectors.get_staff_for_admin(user, role)
+            else:
+                return Response({"status": False, "message": "Unauthorized role"}, status=status.HTTP_403_FORBIDDEN)
+
             return Response({
                 "status": True,
                 "staff": staff_data
             }, status=status.HTTP_200_OK)
+            
         except ValueError as e:
             return Response({"status": False, "message": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
@@ -127,12 +148,18 @@ class StaffManagementView(APIView):
 
     def post(self, request):
         try:
-            staff_member, role = services.create_staff(request.user, request.data)
+            # Extract auth_role from JWT to pass down to the service layer
+            auth_role = request.auth.get('role', '').lower()
+            
+            # Assuming your service layer is updated to accept the auth_role
+            staff_member, role = services.create_staff(request.user, auth_role, request.data)
+            
             return Response({
                 "status": True,
                 "id": str(staff_member.id),
                 "message": f"{role.capitalize()} registered successfully"
             }, status=status.HTTP_201_CREATED)
+            
         except ValueError as e:
             return Response({"status": False, "message": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         except Department.DoesNotExist:
@@ -145,12 +172,15 @@ class StaffManagementView(APIView):
 
     def put(self, request):
         try:
-            staff_member, role = services.update_staff(request.user, request.data)
+            auth_role = request.auth.get('role', '').lower()
+            staff_member, role = services.update_staff(request.user, auth_role, request.data)
+            
             return Response({
                 "status": True,
                 "id": str(staff_member.id),
                 "message": f"{role.capitalize()} updated successfully"
             }, status=status.HTTP_200_OK)
+            
         except ValueError as e:
             return Response({"status": False, "message": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         except Department.DoesNotExist:
