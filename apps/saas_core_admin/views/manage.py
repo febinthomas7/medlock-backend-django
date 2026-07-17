@@ -10,10 +10,12 @@ from apps.hr_attendance_department.models.departments import Department
 # Import your newly extracted layers
 from apps.saas_core_admin.services import manage as services
 from apps.saas_core_admin.selectors import manage as selectors
+from apps.plugin_rbac.permissions.navigation import HasRBACPermission
 
 
 class HospitalManagementView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, HasRBACPermission]
+    required_rbac_permission = "Hospital Management"
 
     def post(self, request):
         try:
@@ -46,7 +48,8 @@ class HospitalManagementView(APIView):
 
 
 class DepartmentManagementView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, HasRBACPermission]
+    required_rbac_permission = "Department Management"
 
     def get(self, request):
         try:
@@ -115,7 +118,8 @@ class DepartmentManagementView(APIView):
 
 
 class StaffManagementView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, HasRBACPermission]
+    required_rbac_permission = "Staff Management"
 
     def get(self, request):
         try:

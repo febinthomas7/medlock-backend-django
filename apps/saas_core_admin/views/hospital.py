@@ -9,9 +9,11 @@ from django.db.models.functions import Coalesce
 from apps.saas_core_admin.models.admins_hospitals import Admin, Hospital
 from apps.hr_attendance_department.models.hrs import Doctor, Receptionist
 from apps.user.models.medical import UserReport
+from apps.plugin_rbac.permissions.navigation import HasRBACPermission
 
 class AdminBranchListView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, HasRBACPermission]
+    required_rbac_permission = "Branch Access"
 
     def get(self, request):
         try:

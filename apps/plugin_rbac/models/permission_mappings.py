@@ -11,6 +11,7 @@ class Permission(TimeStampedModel):
     tab_name = models.CharField(max_length=100, default='')
     suburl = models.CharField(max_length=100)
     plugin = models.ForeignKey(Plugin, on_delete=models.CASCADE)
+    is_override = models.BooleanField(default=True)
 
     def __str__(self):
         return self.name
@@ -28,11 +29,10 @@ class PermissionMapping(TimeStampedModel):
 
 class PermissionOverride(TimeStampedModel):
     admin = models.ForeignKey(Admin, on_delete=models.CASCADE)
-    staff_type = models.CharField(max_length=3) # e.g., 'NS', 'DR'
+    role_type = models.CharField(max_length=3)
     
     # Nullable makes this a dual-purpose table! Nullable means for all staff in a particular role
-    staff_id = models.CharField(max_length=50, null=True, blank=True) 
-    
+    role_id = models.CharField(max_length=50, null=True, blank=True) 
     permission = models.ForeignKey(Permission, on_delete=models.CASCADE)
     is_allowed = models.BooleanField()
     assigned_by = models.CharField(max_length=50)
@@ -41,20 +41,20 @@ class PermissionOverride(TimeStampedModel):
         app_label = 'plugin_rbac'
         
         indexes = [
-            models.Index(fields=['admin', 'staff_type', 'staff_id']),
+            models.Index(fields=['admin', 'role_type', 'role_id']),
         ]
         
         constraints = [
-            # Constraint 1: Handles specific individual user overrides (staff_id is populated)
+            # Constraint 1: Handles specific individual user overrides (  role_id is populated)
             models.UniqueConstraint(
-                fields=['admin', 'staff_type', 'staff_id', 'permission'],
+                fields=['admin', 'role_type', 'role_id', 'permission'],
                 name='unique_individual_permission_override',
-                condition=models.Q(staff_id__isnull=False)
+                condition=models.Q(role_id__isnull=False)
             ),
-            # Constraint 2: Handles global role overrides (staff_id is NULL)
+            # Constraint 2: Handles global role overrides (role_id is NULL)
             models.UniqueConstraint(
-                fields=['admin', 'staff_type', 'permission'],
+                fields=['admin', 'role_type', 'permission'],
                 name='unique_role_permission_override',
-                condition=models.Q(staff_id__isnull=True)
+                condition=models.Q(role_id__isnull=True)          
             )
         ]

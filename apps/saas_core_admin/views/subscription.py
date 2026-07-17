@@ -6,9 +6,11 @@ from apps.plugin_rbac.models import Plugin
 
 from apps.saas_core_admin.selectors import subscription as billing_selectors
 from apps.saas_core_admin.services import subscription as billing_services
+from apps.plugin_rbac.permissions.navigation import HasRBACPermission
 
 class SubscriptionPluginDashboardView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, HasRBACPermission]
+    required_rbac_permission = "Subscription Management"
 
     def get(self, request):
         """Get subscription and plugin status"""

@@ -5,9 +5,11 @@ from rest_framework import status
 from django.core.exceptions import ObjectDoesNotExist
 from apps.hr_attendance_department.models.departments import Department
 from apps.saas_core_admin.services import transfer as services
+from apps.plugin_rbac.permissions.navigation import HasRBACPermission
 
 class StaffTransferView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, HasRBACPermission]
+    required_rbac_permission = "Staff Transfer"
 
     def post(self, request):
         """Transfer a staff member to a new department/hospital"""

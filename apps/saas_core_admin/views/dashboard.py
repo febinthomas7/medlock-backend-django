@@ -12,9 +12,11 @@ from apps.saas_core_admin.models.admins_hospitals import Admin, Hospital
 from apps.hr_attendance_department.models.departments import Department, Ward, Room
 from apps.hr_attendance_department.models.hrs import Doctor, Nurse, Receptionist
 from apps.user.models.medical import UserAppointment, UserReport
+from apps.plugin_rbac.permissions.navigation import HasRBACPermission
 
 class UnifiedDashboardView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, HasRBACPermission]
+    required_rbac_permission = "Unified Dashboard Access"
 
     def get(self, request):
         try:
