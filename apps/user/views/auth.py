@@ -3,10 +3,10 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
 import re
+from django.apps import apps
 
-from apps.saas_core_admin.models.admins_hospitals import Admin, Hospital
-from apps.hr_attendance_department.models.departments import Department, Ward, Room
-from apps.hr_attendance_department.models.hrs import Doctor, Nurse, Receptionist
+# Import both mappings from your single source of truth
+from apps.common.constants import ROLE_MODEL_MAP
 
 class RoleBasedLoginView(APIView):
     """
@@ -14,18 +14,6 @@ class RoleBasedLoginView(APIView):
     """
     permission_classes = [] 
     authentication_classes = []
-
-    # Map URL roles/prefixes to their exact Django Model
-    ROLE_MODEL_MAP = {
-        "admin": Admin, "ad": Admin,
-        "hospital": Hospital, "hp": Hospital,
-        "department": Department, "dp": Department,
-        "ward": Ward, "wr": Ward,
-        "room": Room, "rm": Room,
-        "doctor": Doctor, "dr": Doctor,
-        "nurse": Nurse, "ns": Nurse,
-        "receptionist": Receptionist, "rs": Receptionist
-    }
 
     def post(self, request, role):
         # 1. Get the ID and password from the request
@@ -50,29 +38,46 @@ class RoleBasedLoginView(APIView):
         numeric_id = int(numeric_id_str)
         role = role.lower()
 
-        # 3. Look up the Model based on the role dictionary
-        ModelClass = self.ROLE_MODEL_MAP.get(role)
+        # 3. Get the string path from constants
+        model_path = ROLE_MODEL_MAP.get(role)
         
-        if not ModelClass:
+        if not model_path:
             return Response({"error": "Invalid login role."}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Automatically derive the standard role name (e.g., 'Admin' -> 'admin')
-        role_name = ModelClass.__name__.lower()
-
-        # 4. Query the exact custom table using the designated Model
+        # 4. CONVERT THE STRING TO A REAL DJANGO MODEL
         try:
-            user_instance = ModelClass.objects.get(id=numeric_id)
+            ModelClass = apps.get_model(model_path)
+        except LookupError:
+            return Response({"error": "System configuration error. Model not found."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        # -------------------------------------------------------------
+        # 5. Build contextual database query (The Database Firewall)
+        # -------------------------------------------------------------
+        query_kwargs = {"id": numeric_id}
+        model_name = ModelClass.__name__
+
+        if model_name == 'Department':
+            query_kwargs["department_type"] = role.upper()
+            
+        elif model_name in ['Doctor', 'Nurse', 'Receptionist']:
+            query_kwargs["staff_type"] = role.upper()
+
+        # Proceed with the database query normally
+        try:
+            # Fails immediately if the database type doesn't exactly match the URL role!
+            user_instance = ModelClass.objects.get(**query_kwargs)
         except ModelClass.DoesNotExist:
-            return Response({"error": "User with this ID not found."}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"error": "User not found or access denied for this portal."}, status=status.HTTP_404_NOT_FOUND)
 
-        # 5. Verify the password (TODO: implement password hashing checks)
         if user_instance.password != password:
-            return Response(
-                {"error": "Invalid password."},
-                status=status.HTTP_401_UNAUTHORIZED
-            )
+            return Response({"error": "Invalid password."}, status=status.HTTP_401_UNAUTHORIZED)
 
-        # 6. Prepare Theme Data
+        # 6. Now this will work perfectly because ModelClass is a real model!
+        # Inject the plugin-specific role (e.g., 'id') if they are non-clinical, otherwise use generic (e.g., 'doctor')
+        is_plugin = query_kwargs.get("department_type") not in [None, 'DP'] or query_kwargs.get("staff_type") not in [None, 'DP']
+        role_name = role if is_plugin else model_name.lower()
+
+        # 7. Prepare Theme Data
         theme_data = None
         if hasattr(user_instance, 'theme') and user_instance.theme:
             theme_data = {
@@ -81,12 +86,11 @@ class RoleBasedLoginView(APIView):
                 "mode": getattr(user_instance.theme, 'mode', 'light')
             }
 
-        # 7 Generate Custom JWT Token
+        # 8 Generate Custom JWT Token
         refresh = RefreshToken()
         refresh['user_id'] = user_instance.id
         refresh['role'] = role_name
         
-
         return Response({
             "refresh": str(refresh),
             "access": str(refresh.access_token),

@@ -4,6 +4,7 @@ from rest_framework.permissions import IsAuthenticated
 from django.db import models  # Required for models.Q
 from apps.plugin_rbac.models import Permission, PermissionMapping, PermissionOverride, AdminPlugin
 from apps.saas_core_admin.models.admins_hospitals import Admin, Hospital
+from apps.common.constants import ROLE_EXPANSIONS
 
 class DynamicNavigationView(APIView):
     # Assuming you have JWT authentication set up
@@ -21,23 +22,7 @@ class DynamicNavigationView(APIView):
         if isinstance(raw_roles, str):
             raw_roles = [raw_roles]
             
-        # Complete mapping for both abbreviations and full-length role names
-        ROLE_EXPANSIONS = {
-            'admin': ['admin', 'ad'],
-            'ad': ['admin', 'ad'],
-            'hospital': ['hospital', 'hp'],
-            'hp': ['hospital', 'hp'],
-            'department': ['department', 'dp'],
-            'dp': ['department', 'dp'],
-            'doctor': ['doctor', 'dr'],
-            'dr': ['doctor', 'dr'],
-            'nurse': ['nurse', 'ns'],
-            'ns': ['nurse', 'ns'],
-            'receptionist': ['receptionist', 'rs'],
-            'rs': ['receptionist', 'rs'],
-        }
-
-        # Expand roles so that 'dr' -> ['dr', 'doctor'], 'admin' -> ['admin', 'ad'], etc.
+        # 2. Expand roles using the dictionary imported from common.constants
         roles = []
         for r in raw_roles:
             r_lower = r.lower()
@@ -52,7 +37,7 @@ class DynamicNavigationView(APIView):
         if not user_id or not roles:
             return Response({"navigation": []}, status=200)
 
-        # 2. Determine the Master Admin ID (Tenant ID) based on the hierarchy chain
+        # 3. Determine the Master Admin ID (Tenant ID) based on the hierarchy chain
         admin_id = None
         
         if any(role in ['ad', 'admin'] for role in roles):
@@ -87,13 +72,13 @@ class DynamicNavigationView(APIView):
             print(f"SECURITY BLOCK: Could not resolve admin_id for user {user_id} with roles {roles}")
             return Response({"navigation": []}, status=200)
 
-        # 3. Get ONLY the active plugins for this Admin's Network
+        # 4. Get ONLY the active plugins for this Admin's Network
         active_plugin_ids = AdminPlugin.objects.filter(
             admin_id=admin_id,
             is_active=True
         ).values_list('plugin_id', flat=True)
 
-        # 4. Fetch all permissions mapped to ALL resolved roles for active plugins
+        # 5. Fetch all permissions mapped to ALL resolved roles for active plugins
         # select_related('permission__plugin') is required so we can group by plugin name later
         base_permissions = PermissionMapping.objects.filter(
             role__in=roles,
@@ -103,7 +88,7 @@ class DynamicNavigationView(APIView):
         # Dictionary prevents duplicate permissions when a user matches multiple roles
         allowed_permissions = {}
 
-        # 5. Execute your 3-Tier Security Hierarchy Check
+        # 6. Execute your 3-Tier Security Hierarchy Check
         for mapping in base_permissions:
             perm = mapping.permission
             
@@ -131,7 +116,7 @@ class DynamicNavigationView(APIView):
                 # No override exists, rely on base mapping
                 allowed_permissions[perm.id] = perm
 
-        # 6. Group by Plugin (Tab) and Permission (Sub-tab)
+        # 7. Group by Plugin (Tab) and Permission (Sub-tab)
         nav_dict = {}
         
         for perm in allowed_permissions.values():
